@@ -15,8 +15,12 @@ import time
 from tqdm import tqdm
 from typing import Dict, List, Tuple, Optional
 
-from dataset import create_data_loaders, SteamNetDataset
-from model import create_model, SteamNet_Autoencoder
+try:
+    from .dataset import create_data_loaders, SteamNetDataset
+    from .model import create_model, SteamNet_Autoencoder
+except ImportError:
+    from dataset import create_data_loaders, SteamNetDataset
+    from model import create_model, SteamNet_Autoencoder
 
 
 class MaskedMSELoss(nn.Module):

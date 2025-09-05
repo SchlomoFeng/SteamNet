@@ -115,27 +115,36 @@ class SteamNet_Autoencoder(nn.Module):
         Returns:
             重构结果字典
         """
-        batch_size = data['sensor_node'].x.size(0)
-        num_nodes = data['sensor_node'].x.size(1)
+        # Get the correct tensor dimensions
+        node_features = data['sensor_node'].x  # This should be [batch_size * num_nodes, window_size, feature_dim]
+        if len(node_features.shape) == 3:
+            # Batch format: [batch_size * num_nodes, window_size, feature_dim]
+            batch_nodes, window_size, feature_dim = node_features.shape
+            num_nodes = data['sensor_node'].num_nodes
+            batch_size = batch_nodes // num_nodes
+            # Reshape to [batch_size, num_nodes, window_size, feature_dim]
+            node_features = node_features.view(batch_size, num_nodes, window_size, feature_dim)
+        else:
+            batch_size, num_nodes, window_size, feature_dim = node_features.shape
         
         # 存储所有时间步的编码结果
         temporal_encodings = []
         
         # 对每个时间步进行GCN编码
-        for t in range(self.window_size):
+        for t in range(window_size):
             # 提取当前时间步的特征
-            node_features = data['sensor_node'].x[:, :, t, :]  # [batch_size, num_nodes, feature_dim]
-            batch_size, num_nodes, feature_dim = node_features.shape
+            node_t_features = node_features[:, :, t, :]  # [batch_size, num_nodes, feature_dim]
+            batch_size_t, num_nodes_t, feature_dim_t = node_t_features.shape
             
             # 重新整形和投影
-            x = node_features.view(-1, feature_dim)  # [batch_size * num_nodes, feature_dim]
+            x = node_t_features.view(-1, feature_dim_t)  # [batch_size * num_nodes, feature_dim]
             x = self.node_input_proj(x)  # 投影到隐藏维度
             
             # 边连接信息（为每个批次复制）
             edge_index = data[('sensor_node', 'connects_to', 'sensor_node')].edge_index
             batch_edge_indices = []
-            for b in range(batch_size):
-                batch_edge_indices.append(edge_index + b * num_nodes)
+            for b in range(batch_size_t):
+                batch_edge_indices.append(edge_index + b * num_nodes_t)
             batch_edge_index = torch.cat(batch_edge_indices, dim=1)
             
             # 通过GCN层
@@ -146,14 +155,14 @@ class SteamNet_Autoencoder(nn.Module):
                 h = F.dropout(h, p=self.dropout, training=self.training)
             
             # 重新整形为批次格式
-            encoded = h.view(batch_size, num_nodes, self.hidden_dim)
+            encoded = h.view(batch_size_t, num_nodes_t, self.hidden_dim)
             temporal_encodings.append(encoded)
         
         # 准备GRU输入 - 将时间维度放在正确位置
         # 堆叠所有时间步：[batch_size, num_nodes, window_size, hidden_dim]
         node_temporal = torch.stack(temporal_encodings, dim=2)
         # 重新整形为GRU输入格式：[batch_size * num_nodes, window_size, hidden_dim]
-        gru_input = node_temporal.view(-1, self.window_size, self.hidden_dim)
+        gru_input = node_temporal.view(-1, window_size, self.hidden_dim)
         
         # 通过GRU层获得时序编码
         gru_out, _ = self.node_grus['sensor_node'](gru_input)
@@ -163,7 +172,7 @@ class SteamNet_Autoencoder(nn.Module):
         reconstructions = {}
         
         # 重新整形：[batch_size, num_nodes, window_size, gru_hidden_dim]
-        gru_output = gru_out.view(batch_size, num_nodes, self.window_size, self.gru_hidden_dim)
+        gru_output = gru_out.view(batch_size, num_nodes, window_size, self.gru_hidden_dim)
         
         # 对每个解码器生成重构结果
         for decoder_name, decoder in self.node_decoders.items():
@@ -173,7 +182,7 @@ class SteamNet_Autoencoder(nn.Module):
             
             # 重新整形到原始格式
             output_dim = decoded.size(-1)
-            decoded = decoded.view(batch_size, num_nodes, self.window_size, output_dim)
+            decoded = decoded.view(batch_size, num_nodes, window_size, output_dim)
             
             reconstructions[f'sensor_node_{decoder_name}'] = decoded
         
@@ -208,7 +217,18 @@ class SteamNet_Autoencoder(nn.Module):
         total_loss = 0.0
         
         # 从目标数据提取特征
-        target_features = targets['sensor_node'].x  # [batch, nodes, time, features]
+        target_features = targets['sensor_node'].x  # Should be [batch_size * num_nodes, window_size, features] or similar
+        
+        # Handle different tensor formats
+        if len(target_features.shape) == 3:
+            # Format: [batch_size * num_nodes, window_size, features]
+            batch_nodes, window_size, feature_dim = target_features.shape
+            num_nodes = targets['sensor_node'].num_nodes
+            batch_size = batch_nodes // num_nodes
+            target_features = target_features.view(batch_size, num_nodes, window_size, feature_dim)
+        else:
+            # Format: [batch_size, num_nodes, window_size, features] 
+            batch_size, num_nodes, window_size, feature_dim = target_features.shape
         
         # 假设特征顺序是：[Pressure, Mass_Flow, Temperature, dP_dt, dT_dt, dM_dt, 
         #                   pressure_mask, flow_mask, temp_mask, state_normal, state_anomaly, state_no_demand]

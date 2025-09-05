@@ -1,0 +1,9 @@
+{
+  "threshold": 883822835.2,
+  "total_samples": 10,
+  "detected_anomalies": 0,
+  "detection_rate": 0.0,
+  "avg_reconstruction_error": 573898848.0,
+  "max_reconstruction_error": 586253632.0,
+  "min_reconstruction_error": 565147136.0
+}

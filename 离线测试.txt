@@ -1,0 +1,176 @@
+### **AI Agent 项目构建指令 (Master Prompt - Offline Evaluation Version)**
+
+**你好！我需要你作为我的AI开发伙伴，根据以下详细的项目蓝图，使用Python构建一个完整的“基于图神经网络的化工蒸汽管网异常检测系统”。请严格遵循每个阶段的指令、文件名、函数签名和技术栈要求。**
+
+#### **项目概览**
+
+*   **项目名称:** `SteamPipeAnomalyDetection`
+*   **核心目标:** 利用PyTorch和PyTorch Geometric (PyG)，构建并离线评估一个异构时序图自编码器模型，用于检测工业蒸汽管网中的异常事件（如泄漏、堵塞）。
+*   **技术栈:** Python 3.9+, PyTorch, PyTorch Geometric (PyG), Pandas, NumPy, Scikit-learn, Joblib, PyArrow, Matplotlib, Seaborn。
+
+#### **项目文件结构**
+
+请在项目根目录下创建以下文件和文件夹结构：
+
+```
+SteamNet/
+├── data/
+│   ├── raw/
+│   │   ├── 蓬莱蒸汽S40.json         # 管网拓扑结构图纸
+│   │   └── Sim_Dataset/             # 存放所有节点历史数据的文件夹
+│   │       ├── 节点名称1.csv
+│   │       ├── 节点名称2.csv
+│   │       └── ...
+│   └── processed/                   # 存放第一阶段处理后生成的所有特征文件
+│       ├── adjacency.pkl
+│       ├── node_map.json
+│       ├── link_map.json
+│       ├── static_feature_scaler.joblib
+│       ├── static_edge_features.parquet
+│       ├── timeseries_node_features.parquet
+│       └── timeseries_edge_features.parquet
+├── models/                          # 存放训练好的模型文件
+│   └── best_steamnet_model.pt
+├── reports/                         # 存放第三阶段生成的评估报告和图表
+│   ├── evaluation_summary.csv
+│   └── figures/
+│       └── anomaly_event_example.png
+├── src/
+│   ├── __init__.py
+│   ├── build_features.py            # 第一阶段：数据预处理与特征工程脚本
+│   ├── dataset.py                   # 第二阶段：PyG的Dataset和DataLoader定义
+│   ├── model.py                     # 第二阶段：GNN模型架构定义
+│   ├── train.py                     # 第二阶段：模型训练、验证与保存脚本
+│   └── evaluate.py                  # 第三阶段：离线模型评估与报告生成脚本
+└── requirements.txt                 # 项目依赖
+```
+
+#### **数据源说明**
+
+*   **拓扑文件:** `data/raw/蓬莱蒸汽S40.json` 包含`nodelist`和`linklist`。
+    *   `nodelist`中的每个对象都有一个`"name"`字段。
+*   **时序数据:** `data/raw/Sim_Dataset/` 文件夹。
+    *   文件夹内包含多个CSV文件。每个CSV的文件名（不含`.csv`后缀）与`nodelist`中某个节点的`"name"`值完全对应。
+    *   每个CSV文件包含列: `timestamp`, `Node_ID`, `Pressure`, `Mass_Flow`, `Temperature`。
+
+---
+
+### **第一阶段：数据预处理与特征工程 (`src/build_features.py`)**
+
+**任务:** 创建一个独立的脚本，执行所有离线数据处理和特征生成任务，并将结果保存到`data/processed/`目录。
+
+**请在`src/build_features.py`中实现以下功能:**
+
+1.  **加载原始数据:**
+    *   实现一个函数 `load_and_merge_timeseries_data(json_path, csv_folder_path)`：
+        *   读取`蓬莱蒸汽S40.json`中的`nodelist`。
+        *   遍历`nodelist`，根据每个节点的`"name"`，去`Sim_Dataset`文件夹中找到并读取对应的CSV文件。
+        *   将所有CSV数据合并成一个大的Pandas DataFrame。使用`node_id`和`timestamp`作为多级索引。
+        *   返回这个合并后的DataFrame。
+
+2.  **静态图结构构建:**
+    *   实现一个函数 `build_static_graph(json_path)`：
+        *   读取`蓬莱蒸汽S40.json`。
+        *   创建`node_id_to_idx`和`link_id_to_idx`映射字典，并保存为`node_map.json`和`link_map.json`。
+        *   根据`nodelist`中的节点类型，为异构图创建`edge_index_dict`。
+        *   使用pickle将`edge_index_dict`保存为`adjacency.pkl`。
+
+3.  **静态边特征提取:**
+    *   实现一个函数 `create_static_edge_features(json_path, link_map)`：
+        *   从`linklist`中提取`Length`, `Inner_Diameter`, `Roughness`等物理属性。
+        *   使用`sklearn.preprocessing.StandardScaler`对这些特征进行归一化。
+        *   使用`joblib`将定标器对象保存为`static_feature_scaler.joblib`。
+        *   将归一化后的特征矩阵保存为`static_edge_features.parquet`。
+
+4.  **动态特征工程与标注:**
+    *   实现一个函数 `create_dynamic_features(merged_df, node_map, adjacency_dict)`：
+        *   **标注:** 对合并后的DataFrame，根据方案中的详细规则，为每个时间点的每个节点添加`label`列（0: normal, 1: anomaly, 2: no_demand）。
+        *   **节点特征:** 计算时间导数（`dP/dt`等），创建掩码向量和One-Hot状态向量。将所有节点特征整合，保存为`timeseries_node_features.parquet`。
+        *   **边特征:** 计算`Mode_Indicator`, `Pressure_Drop`, `Temperature_Drop`, 和归一化的`Node_Mass_Balance_Residual`。将所有动态边特征整合，保存为`timeseries_edge_features.parquet`。
+
+5.  **主函数:**
+    *   在`if __name__ == "__main__":`中，按顺序调用以上所有函数，完成从原始数据到处理后特征的全过程。
+
+---
+
+### **第二阶段：模型开发与训练 (`src/dataset.py`, `src/model.py`, `src/train.py`)**
+
+**任务:** 构建、训练并保存GNN模型。
+
+**1. `src/dataset.py`:**
+*   创建一个名为`SteamNetDataset`的类，继承自`torch_geometric.data.Dataset`。
+*   在`__init__`中加载第一阶段生成的所有`.parquet`和`.pkl`文件。
+*   实现`__len__`方法，返回训练的时间窗口总数。
+*   实现`__getitem__(idx)`方法：
+    *   根据索引`idx`切片出一个`window_size`长度的时间窗口数据。
+    *   将静态边特征扩展到`window_size`的长度。
+    *   将所有特征组装成一个`torch_geometric.data.HeteroData`对象。
+    *   返回这个`HeteroData`对象。
+
+**2. `src/model.py`:**
+*   创建一个名为`SteamNet_Autoencoder`的PyTorch模块 (`torch.nn.Module`)。
+*   在`__init__`中定义所有网络层：
+    *   **编码器:** 2-3层`HGTConv`层。为每种节点类型（`sensor_node`, `tee_node`等）创建一个独立的2层`GRU`。
+    *   **解码器:** 为每个需要重构的节点和边特征，创建独立的MLP解码头。
+*   实现`forward(data: HeteroData)`方法，严格按照方案中描述的逻辑执行：`HGTConv` -> 按节点类型送入不同`GRU` -> 送入解码头。
+
+**3. `src/train.py`:**
+*   **损失函数:** 实现一个`MaskedMSELoss`函数，可以处理带掩码的损失计算。
+*   **训练设置:** 设置超参数（学习率、批大小、窗口大小、epoch数）。
+*   **数据加载:** 实例化`SteamNetDataset`和`DataLoader`，确保只加载`label`为0或2的训练数据。
+*   **训练循环:**
+    *   实例化模型、优化器。
+    *   遍历epoch和数据批次。
+    *   执行模型前向传播，计算异构损失（对不同解码头的损失加权求和）。
+    *   执行反向传播和优化器步骤。
+    *   实现验证逻辑，在验证集上监控模型性能。
+    *   训练结束后，将最佳模型权重和训练好的`node_map`等一同保存到`models/`目录下。
+---
+
+### **第三阶段：离线测试 (`src/evaluate.py`)**
+
+**原则:** 将训练好的模型在未见过的测试数据上进行评估，生成量化的性能指标和可视化的分析报告。
+
+**执行者:** 一个独立的评估脚本 (`src/evaluate.py`)。
+
+**任务:** 创建一个脚本，执行所有离线测试任务，并将结果保存到`reports/`目录。
+
+**请在`src/evaluate.py`中实现以下功能:**
+
+1.  **加载工件 (Artifacts):**
+    *   实现一个函数 `load_artifacts(model_path, data_dir)`：
+        *   加载保存在 `models/best_steamnet_model.pt` 的模型权重，并实例化`SteamNet_Autoencoder`模型，将其设置为评估模式 (`.eval()`)。
+        *   加载`data/processed/`目录下的`node_map.json`, `adjacency.pkl`等所有必要文件。
+
+2.  **准备测试数据:**
+    *   实例化`src.dataset.SteamNetDataset`和`DataLoader`。
+    *   **重要:** 确保`Dataset`能够区分训练集、验证集和测试集。可以在`build_features.py`中预先为数据打上`split`标签（'train', 'val', 'test'），或者在`Dataset`初始化时传入一个时间范围来指定测试数据。测试集应包含一些在训练时被标记为`anomaly(1)`的数据点，以便评估检测能力。
+
+3.  **模型推理与误差计算:**
+    *   实现一个函数 `run_inference(model, test_loader)`：
+        *   遍历测试`DataLoader`，不计算梯度 (`torch.no_grad()`)。
+        *   对每个批次，执行模型前向传播，得到重构特征。
+        *   计算每个节点和每条边在每个时间点的重构误差（例如，带掩码的均方误差）。
+        *   返回一个包含所有时间点的`timestamp`, `node/edge_id`, `reconstruction_error`和`true_label`的DataFrame。
+
+4.  **阈值确定与异常检测:**
+    *   使用在**验证集 (validation set)** 上计算出的重构误差，确定一个异常判定的阈值（例如，误差的99.5%分位数）。
+
+5.  **性能评估与报告生成:**
+    *   实现一个函数 `generate_report(results_df, threshold)`：
+        *   **分类指标:** 将测试集上的重构误差与阈值比较，得到预测标签。将预测标签与真实标签（来自`label`列）进行比较，计算并打印**精确率 (Precision)、召回率 (Recall) 和 F1分数 (F1-Score)**。
+        *   **生成摘要CSV:** 创建一个`evaluation_summary.csv`文件，保存在`reports/`目录下。文件中应包含所有被检测为异常的事件，列包括：`start_time`, `end_time`, `element_id` (节点/管道ID), `element_type`, `max_error`, `feature_with_max_error`。
+
+6.  **结果可视化:**
+    *   实现一个函数 `visualize_results(results_df, original_data_df)`：
+        *   选择一两个典型的、被正确检测出的异常事件。
+        *   为每个事件生成一张图表，保存在`reports/figures/`目录下。
+        *   图表应包含两个子图：
+            *   **子图A:** 绘制异常分数（重构误差）随时间变化的曲线，并用一条水平红线标出告警阈值。
+            *   **子图B:** 绘制导致最大误差的那个物理量（如`Mass_Flow`）的**实际值**和**模型重构值**随时间变化的对比曲线。
+        *   图表标题应清晰地说明事件信息（如“Anomaly Event on Pipe XXX at YYYY-MM-DD HH:MM”）。
+
+7.  **主函数:**
+    *   在`if __name__ == "__main__":`中，按顺序调用以上所有函数，完成从加载模型到生成最终评估报告和图表的完整离线测试流程。
+
+**请开始构建项目。如果你在任何步骤需要澄清，随时可以提问。**

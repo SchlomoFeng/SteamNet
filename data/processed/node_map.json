@@ -1,0 +1,177 @@
+{
+  "二期PDH预留甩头": {
+    "idx": 0,
+    "type": "Stream",
+    "name": "二期PDH预留甩头"
+  },
+  "PDH装置": {
+    "idx": 1,
+    "type": "Stream",
+    "name": "PDH装置"
+  },
+  "分布式能源站": {
+    "idx": 2,
+    "type": "Stream",
+    "name": "分布式能源站"
+  },
+  "1": {
+    "idx": 3,
+    "type": "Mixer",
+    "name": "1"
+  },
+  "S40减S15减温减压站(0141)": {
+    "idx": 4,
+    "type": "Stream",
+    "name": "S40减S15减温减压站(0141)"
+  },
+  "丙烯酸及酯": {
+    "idx": 5,
+    "type": "Stream",
+    "name": "丙烯酸及酯"
+  },
+  "POCHP装置": {
+    "idx": 6,
+    "type": "Stream",
+    "name": "POCHP装置"
+  },
+  "Mixer14": {
+    "idx": 7,
+    "type": "Mixer",
+    "name": "Mixer14"
+  },
+  "放空阀1": {
+    "idx": 8,
+    "type": "VavlePro",
+    "name": "放空阀1"
+  },
+  "Tee261": {
+    "idx": 9,
+    "type": "Tee",
+    "name": "Tee261"
+  },
+  "VavlePro354": {
+    "idx": 10,
+    "type": "VavlePro",
+    "name": "VavlePro354"
+  },
+  "Tee10": {
+    "idx": 11,
+    "type": "Tee",
+    "name": "Tee10"
+  },
+  "VavlePro31": {
+    "idx": 12,
+    "type": "VavlePro",
+    "name": "VavlePro31"
+  },
+  "环氧乙烷EO": {
+    "idx": 13,
+    "type": "Stream",
+    "name": "环氧乙烷EO"
+  },
+  "VavlePro29": {
+    "idx": 14,
+    "type": "VavlePro",
+    "name": "VavlePro29"
+  },
+  "Tee27": {
+    "idx": 15,
+    "type": "Tee",
+    "name": "Tee27"
+  },
+  "Tee35": {
+    "idx": 16,
+    "type": "Tee",
+    "name": "Tee35"
+  },
+  "ABS预留": {
+    "idx": 17,
+    "type": "Stream",
+    "name": "ABS预留"
+  },
+  "Q1管廊盲端（预留）": {
+    "idx": 18,
+    "type": "Stream",
+    "name": "Q1管廊盲端（预留）"
+  },
+  "PCDL": {
+    "idx": 19,
+    "type": "Stream",
+    "name": "PCDL"
+  },
+  "Tee21": {
+    "idx": 20,
+    "type": "Tee",
+    "name": "Tee21"
+  },
+  "焚烧炉": {
+    "idx": 21,
+    "type": "Stream",
+    "name": "焚烧炉"
+  },
+  "Tee257": {
+    "idx": 22,
+    "type": "Tee",
+    "name": "Tee257"
+  },
+  "Tee43": {
+    "idx": 23,
+    "type": "Tee",
+    "name": "Tee43"
+  },
+  "气体分离（变换单元）": {
+    "idx": 24,
+    "type": "Stream",
+    "name": "气体分离（变换单元）"
+  },
+  "Tee251": {
+    "idx": 25,
+    "type": "Tee",
+    "name": "Tee251"
+  },
+  "国电蒸汽预留盲端": {
+    "idx": 26,
+    "type": "Tee",
+    "name": "国电蒸汽预留盲端"
+  },
+  "预留甩头": {
+    "idx": 27,
+    "type": "Stream",
+    "name": "预留甩头"
+  },
+  "": {
+    "idx": 28,
+    "type": "Tee",
+    "name": ""
+  },
+  "放空阀2": {
+    "idx": 29,
+    "type": "Stream",
+    "name": "放空阀2"
+  },
+  "VavlePro33": {
+    "idx": 30,
+    "type": "VavlePro",
+    "name": "VavlePro33"
+  },
+  "南端预留甩头": {
+    "idx": 31,
+    "type": "Stream",
+    "name": "南端预留甩头"
+  },
+  "Tee247": {
+    "idx": 32,
+    "type": "Tee",
+    "name": "Tee247"
+  },
+  "Tee243": {
+    "idx": 33,
+    "type": "Tee",
+    "name": "Tee243"
+  },
+  "Tee19": {
+    "idx": 34,
+    "type": "Tee",
+    "name": "Tee19"
+  }
+}

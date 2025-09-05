@@ -1,0 +1,24 @@
+{
+  "config": {
+    "window_size": 24,
+    "batch_size": 8,
+    "learning_rate": 0.001,
+    "num_epochs": 2,
+    "hidden_dim": 32,
+    "gru_hidden_dim": 16,
+    "num_hgt_layers": 2,
+    "num_gru_layers": 1,
+    "dropout": 0.1
+  },
+  "feature_dims": {
+    "node_feature_dim": 12,
+    "edge_feature_dim": 3,
+    "window_size": 24,
+    "num_nodes": 280,
+    "num_edges": 25
+  },
+  "history": {
+    "train_history": [],
+    "val_history": []
+  }
+}
